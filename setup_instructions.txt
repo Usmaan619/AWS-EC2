@@ -1,0 +1,183 @@
+# GlobalHub EC2 Ubuntu Deployment Documentation
+
+## 1. Prerequisites
+
+- AWS EC2 Ubuntu instance (SSH access)
+- Domain name (DNS editable)
+- Node.js app codebase (with .env file)
+- MySQL server & database/dump file
+
+---
+
+## 2. SSH Login
+
+ssh -i /path/to/key.pem ubuntu@<ec2-public-ip>
+
+---
+
+## 3. System Update & Tools Installation
+
+sudo apt update && sudo apt upgrade -y
+sudo apt install nodejs npm git nginx unzip -y
+
+---
+
+## 4. App Setup & .env Configuration
+
+- Upload backend files to: /home/ubuntu/work/global_hub_backend
+- .env file in backend root:
+
+PORT=5002
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=your_secure_password
+DB_DATABASE=global_hub
+DB_PORT=3306
+JWT_SECRET=yourSuperSecretKey
+
+- Install dependencies:
+
+cd ~/work/global_hub_backend
+npm install
+
+---
+
+## 5. MySQL Database Import
+
+sudo systemctl status mysql      # check MySQL running status
+sudo systemctl start mysql       # start if stopped
+mysql -u root -p
+CREATE DATABASE global_hub;
+exit
+
+mysql -u root -p global_hub < ~/global_hub_databs.sql
+
+---
+
+## 6. Run Node.js App with PM2
+
+sudo npm install -g pm2
+pm2 start app.js --name app
+pm2 save
+pm2 startup
+# Copy-paste the suggested sudo command from PM2 output
+
+---
+
+## 7. Nginx Configuration (Reverse Proxy)
+
+sudo nano /etc/nginx/sites-available/api.globalhub-bpo.com
+
+Paste:
+
+server {
+    listen 80;
+    server_name api.globalhub-bpo.com;
+
+    location / {
+        proxy_pass http://localhost:5002;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+
+sudo ln -s /etc/nginx/sites-available/api.globalhub-bpo.com /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+
+---
+
+## 8. SSL Certificate via Certbot (Let's Encrypt)
+
+sudo apt install python3-certbot-nginx -y
+sudo certbot --nginx -d api.globalhub-bpo.com
+sudo certbot renew --dry-run
+
+---
+
+## 9. Static Site Hosting (Frontend)
+
+sudo cp -r ~/next-site /usr/share/nginx/
+sudo chmod -R 755 /usr/share/nginx/next-site
+sudo chown -R www-data:www-data /usr/share/nginx/next-site
+
+sudo nano /etc/nginx/sites-available/globalhub-bpo.com
+
+Paste:
+
+server {
+    listen 80;
+    server_name globalhub-bpo.com www.globalhub-bpo.com;
+
+    root /usr/share/nginx/next-site;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}
+
+sudo ln -s /etc/nginx/sites-available/globalhub-bpo.com /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+sudo certbot --nginx -d globalhub-bpo.com -d www.globalhub-bpo.com
+
+---
+
+## 10. Domain DNS Setup
+
+- A record "@" → EC2 public IP
+- A record "www" → EC2 public IP
+
+---
+
+## 11. Frontend to Backend API Call Example
+
+// Sample JS fetch code (React/JS frontend)
+fetch('https://api.globalhub-bpo.com/api/something')
+  .then(res => res.json())
+  .then(data => console.log(data));
+
+- Use website domain, not localhost.
+- If CORS error, ensure backend has:
+
+const cors = require('cors');
+app.use(cors());
+
+---
+
+## 12. Useful Commands
+
+| Task                      | Command                                   |
+|---------------------------|-------------------------------------------|
+| PM2 process list          | pm2 ls                                    |
+| Stop Node app             | pm2 stop app                              |
+| Restart Node app          | pm2 restart app                           |
+| Logs                      | pm2 logs app                              |
+| Nginx reload              | sudo systemctl reload nginx               |
+| Renew SSL test            | sudo certbot renew --dry-run              |
+| MySQL login               | mysql -u root -p                          |
+| Change file ownership     | sudo chown -R www-data:www-data <dir>     |
+
+---
+
+## 13. Security & Maintenance Tips
+
+- Never upload your `.env` file to GitHub.
+- Use `pm2 save` after updates.
+- Always test nginx config: `sudo nginx -t`
+- Certbot will auto-renew SSL, check: `sudo certbot renew --dry-run`
+
+---
+
+## 14. Troubleshooting
+
+- Not running? Check: `pm2 logs app`
+- SSL errors? Check: `sudo certbot renew --dry-run`
+- API not accessible? Check security group, nginx config, CORS settings.
+
+---
+
