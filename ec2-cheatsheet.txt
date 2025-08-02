@@ -1,0 +1,120 @@
+# -----------------------------------------
+# 💻 1. EC2 SSH Access
+# -----------------------------------------
+
+# Connect to EC2 instance
+ssh -i your-key.pem ubuntu@your-ec2-public-ip
+
+# Set permissions (only once)
+chmod 400 your-key.pem
+
+# Reboot the instance
+sudo reboot
+
+# Shutdown
+sudo shutdown now
+
+# -----------------------------------------
+# 📂 2. File Transfer to/from EC2
+# -----------------------------------------
+
+# Upload file/folder to EC2
+scp -i your-key.pem file.txt ubuntu@your-ec2-public-ip:/home/ubuntu/
+
+# Download file from EC2 to local
+scp -i your-key.pem ubuntu@your-ec2-public-ip:/home/ubuntu/file.txt .
+
+# Upload full build folder (e.g., Next.js)
+scp -r -i your-key.pem ./out ubuntu@your-ec2-public-ip:/home/ubuntu/next-site/
+
+# -----------------------------------------
+# 🔒 3. Security Groups (Firewall Rules)
+# -----------------------------------------
+
+# Allow SSH (port 22), HTTP (80), HTTPS (443)
+# Done via AWS Console → EC2 → Security Groups
+
+# Example: open port 3000 (for dev apps)
+# Inbound Rules → Add Rule:
+#   Type: Custom TCP | Port: 3000 | Source: 0.0.0.0/0
+
+# -----------------------------------------
+# 🌐 4. Public IP Check
+# -----------------------------------------
+
+# Check public IP from within EC2
+curl ifconfig.me
+
+# Or check internal private IP
+hostname -I
+
+# -----------------------------------------
+# 🧱 5. EBS Disk Management (if needed)
+# -----------------------------------------
+
+# List block devices
+lsblk
+
+# Mount a new volume
+sudo mkfs -t ext4 /dev/xvdf
+sudo mkdir /mnt/mydisk
+sudo mount /dev/xvdf /mnt/mydisk
+
+# Add to /etc/fstab for auto-mount
+
+# -----------------------------------------
+# 🔄 6. System Updates & Essentials
+# -----------------------------------------
+
+sudo apt update && sudo apt upgrade -y
+sudo apt install unzip curl git nginx build-essential
+
+# Node.js (via NVM)
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+source ~/.bashrc
+nvm install --lts
+node -v
+npm -v
+
+# -----------------------------------------
+# 🔥 7. PM2 Commands (Quick)
+# -----------------------------------------
+
+pm2 start app.js --name my-app
+pm2 restart my-app
+pm2 logs
+pm2 save
+pm2 startup
+
+# -----------------------------------------
+# 🌐 8. NGINX Commands (Quick)
+# -----------------------------------------
+
+sudo systemctl restart nginx
+sudo systemctl status nginx
+sudo nginx -t   # test config
+sudo nano /etc/nginx/sites-available/default
+
+# -----------------------------------------
+# ⚙️ 9. Performance Monitoring
+# -----------------------------------------
+
+top             # Live system monitor
+htop            # (Install: sudo apt install htop)
+df -h           # Disk usage
+free -h         # RAM usage
+uptime          # Server uptime
+pm2 monit       # App resource usage
+
+# -----------------------------------------
+# 🧹 10. Clean Logs, Memory (if needed)
+# -----------------------------------------
+
+# Clear PM2 logs
+pm2 flush
+
+# Clean memory cache (use with care)
+sudo sync
+sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'
+
+# -----------------------------------------
