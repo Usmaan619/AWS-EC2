@@ -1,0 +1,68 @@
+# Next.js Static Export Deployment on NGINX
+# -----------------------------------------
+
+## 1. On Local Machine – Build and Export the Project
+
+npm run build
+npm run export
+
+# This generates an `out/` folder with static files
+
+## 2. Upload the New Build to the Server
+
+scp -i global-hub-backend.pem next-site.zip   ubuntu@ec2-13-203-81-32.ap-south-1.compute.amazonaws.com:/home/ubuntu/
+
+
+# Copy the exported files to your server (replace with your IP and paths)
+
+scp -r ./out/* ubuntu@<your-server-ip>:/home/ubuntu/next-site/
+
+# Then SSH into your server:
+
+ssh ubuntu@<your-server-ip>
+
+## 3. Remove Old Files (optional but recommended)
+
+sudo rm -rf /usr/share/nginx/next-site/*
+
+## 4. Copy New Files to NGINX Root Directory
+
+sudo cp -r /home/ubuntu/next-site/* /usr/share/nginx/next-site/
+
+## 5. Set Correct Permissions (optional but safe)
+
+sudo chown -R www-data:www-data /usr/share/nginx/next-site/
+
+## 6. NGINX Config Check (should already be set like this)
+
+# Path: /etc/nginx/sites-available/default (or custom config)
+# Example block:
+
+server {
+    listen 80;
+    server_name yourdomain.com;
+
+    root /usr/share/nginx/next-site;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}
+
+## 7. Reload NGINX (only if config changed)
+
+sudo systemctl reload nginx
+
+## 8. Visit Your Site
+
+http://<your-server-ip>/ 
+or 
+http://yourdomain.com/
+
+# -----------------------------------------
+# Notes:
+# - Ensure you run `npm run export`, not just `npm run build`.
+# - `out/` folder must contain `index.html`, `_next/`, etc.
+# - SSR features do NOT work with static export.
+
