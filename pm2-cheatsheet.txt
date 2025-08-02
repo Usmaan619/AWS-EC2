@@ -1,0 +1,79 @@
+# -----------------------------------
+# 🔧 PM2 Basic Process Management
+# -----------------------------------
+
+# List all running processes
+pm2 list
+
+# Start an app (e.g., from app.js or npm script)
+pm2 start app.js --name my-app
+
+# Start an app using package.json script
+pm2 start npm --name my-app -- start
+
+# Restart a specific app
+pm2 restart my-app
+
+# Stop a specific app
+pm2 stop my-app
+
+# Delete a specific app from PM2
+pm2 delete my-app
+
+# Monitor logs in real time
+pm2 logs
+
+# View logs for a specific app
+pm2 logs my-app
+
+# Flush (clear) all logs
+pm2 flush
+
+# Show detailed info about an app
+pm2 show my-app
+
+# -----------------------------------
+# 💾 Saving & Auto-Start on Reboot
+# -----------------------------------
+
+# Save current PM2 process list
+pm2 save
+
+# Generate startup script (auto-run after reboot)
+pm2 startup
+
+# Run the printed command from above (as sudo)
+sudo env PATH=$PATH:/home/ubuntu/.nvm/versions/node/vX.X.X/bin pm2 startup systemd -u ubuntu --hp /home/ubuntu
+
+# -----------------------------------
+# 🔍 System Resource Usage
+# -----------------------------------
+
+# Check CPU/Memory usage of apps
+pm2 monit
+
+# -----------------------------------
+# 📂 Log File Locations
+# -----------------------------------
+
+# Standard logs path (default)
+~/.pm2/logs/
+
+# Example:
+# ~/.pm2/logs/my-app-out.log
+# ~/.pm2/logs/my-app-error.log
+
+# -----------------------------------
+# 🛠 Troubleshooting
+# -----------------------------------
+
+# Reset a stuck app or state
+pm2 delete all && pm2 save
+
+# Check PM2 version
+pm2 -v
+
+# Update PM2
+npm install -g pm2
+
+# -----------------------------------
