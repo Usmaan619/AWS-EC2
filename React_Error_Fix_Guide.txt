@@ -1,0 +1,65 @@
+
+⚙️ Error Log & Solutions for React Deployment (AWS EC2 + Nginx + Hostinger)
+===========================================================================
+
+1️⃣ ln: failed to create symbolic link
+--------------------------------------
+Fix:
+sudo rm /etc/nginx/sites-enabled/reactapp
+sudo ln -s /etc/nginx/sites-available/reactapp /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl restart nginx
+
+2️⃣ open() "/etc/nginx/sites-enabled/gauswarn.com" failed
+--------------------------------------------------------
+Fix:
+Ensure correct site file exists in /etc/nginx/sites-available/reactapp
+
+3️⃣ Certbot: no valid A records
+-------------------------------
+Fix:
+Add A records in Hostinger:
+A @ → 13.232.83.162
+A www → 13.232.83.162
+
+4️⃣ Certbot unauthorized (IPv6 issue)
+-------------------------------------
+Fix:
+Delete AAAA record from Hostinger
+Disable Hostinger CDN
+sudo certbot --nginx -d gauswarn.com -d www.gauswarn.com --preferred-challenges http -4
+
+5️⃣ 500 Internal Server Error
+-----------------------------
+Cause: Wrong Nginx config or missing build
+Fix:
+Use working config with:
+try_files $uri $uri/ /index.html;
+
+6️⃣ Permission denied (13)
+--------------------------
+Fix:
+sudo chown -R www-data:www-data /home/ubuntu/build
+sudo chmod -R 755 /home/ubuntu/build
+sudo find /home/ubuntu/build -type f -exec chmod 644 {} \;
+sudo chmod +x /home /home/ubuntu /home/ubuntu/build
+
+7️⃣ rewrite or internal redirection cycle
+----------------------------------------
+Fix:
+Change try_files to:
+try_files $uri $uri/ /index.html;
+
+8️⃣ Certbot unauthorized (AAAA cache)
+-------------------------------------
+Fix:
+Wait DNS propagation, then run:
+sudo certbot --nginx -d gauswarn.com -d www.gauswarn.com --preferred-challenges http -4
+
+✅ Final Working Setup
+----------------------
+- Domain: gauswarn.com
+- IP: 13.232.83.162
+- SSL: Let’s Encrypt
+- Owner: www-data
+- Permissions: 755 folders / 644 files
+- CDN: Disabled
