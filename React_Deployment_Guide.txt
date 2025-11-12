@@ -1,0 +1,107 @@
+
+🚀 React App Deployment Guide
+=============================
+AWS EC2 + Nginx + Hostinger + Let’s Encrypt (SSL)
+
+1️⃣ EC2 SETUP
+-------------
+1. Launch EC2 → Ubuntu 22.04, t2.micro
+2. Open ports 22 (SSH), 80 (HTTP), 443 (HTTPS)
+3. Connect:
+   ssh -i "key.pem" ubuntu@<EC2-IP>
+
+2️⃣ INSTALL NODEJS & NGINX
+--------------------------
+sudo apt update
+sudo apt install nginx -y
+sudo systemctl enable nginx
+sudo apt install nodejs npm -y
+
+3️⃣ BUILD REACT APP
+-------------------
+npm run build
+scp -i "key.pem" -r build/ ubuntu@<EC2-IP>:/home/ubuntu/
+
+4️⃣ NGINX CONFIG
+----------------
+sudo nano /etc/nginx/sites-available/reactapp
+
+Paste:
+--------------------------------
+server {
+    listen 80;
+    server_name gauswarn.com www.gauswarn.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name gauswarn.com www.gauswarn.com;
+
+    ssl_certificate /etc/letsencrypt/live/www.gauswarn.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/www.gauswarn.com/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    root /home/ubuntu/build;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location ~* \.(?:ico|css|js|gif|jpe?g|png|svg|woff2?|ttf|eot)$ {
+        expires 6M;
+        access_log off;
+        add_header Cache-Control "public";
+    }
+
+    error_page 404 /index.html;
+    error_page 500 502 503 504 /50x.html;
+    location = /50x.html {
+        root /usr/share/nginx/html;
+    }
+}
+--------------------------------
+
+sudo ln -s /etc/nginx/sites-available/reactapp /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+
+5️⃣ PERMISSIONS
+---------------
+sudo chown -R www-data:www-data /home/ubuntu/build
+sudo chmod -R 755 /home/ubuntu/build
+sudo find /home/ubuntu/build -type f -exec chmod 644 {} \;
+sudo chmod +x /home /home/ubuntu /home/ubuntu/build
+
+6️⃣ HOSTINGER DNS
+-----------------
+A @ → 13.232.83.162
+A www → 13.232.83.162
+A api → 13.232.83.162
+❌ Delete AAAA record
+✅ Keep MX, TXT, CNAME for mail
+❌ Disable Hostinger CDN
+
+7️⃣ SSL INSTALL
+---------------
+sudo apt install certbot python3-certbot-nginx -y
+sudo certbot --nginx -d gauswarn.com -d www.gauswarn.com --preferred-challenges http -4
+
+8️⃣ SSL AUTO RENEW
+------------------
+sudo certbot renew --dry-run
+
+9️⃣ AUTO DEPLOY SCRIPT
+----------------------
+#!/bin/bash
+cd /home/ubuntu/your-react-app
+npm run build
+sudo rm -rf /home/ubuntu/build
+cp -r build /home/ubuntu/
+sudo chown -R www-data:www-data /home/ubuntu/build
+sudo chmod -R 755 /home/ubuntu/build
+sudo find /home/ubuntu/build -type f -exec chmod 644 {} \;
+sudo systemctl restart nginx
+echo "✅ Deployment Complete!"
